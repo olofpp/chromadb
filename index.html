@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>ChromaDB Document Builder v2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        /* Content editor - Word-like */
+        .content-editor {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 400px;
+            background: white;
+            cursor: text;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .content-editor:focus-within {
+            border-color: #667eea;
+        }
+        .content-editor[contenteditable] {
+            outline: none;
+        }
+        .content-editor img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 15px 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .content-editor p {
+            margin: 10px 0;
+            min-height: 1.6em;
+        }
+        .editor-hint {
+            color: #999;
+            font-style: italic;
+            pointer-events: none;
+        }
+        .editor-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+        .toolbar-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .toolbar-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        button.submit-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button.submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+        
+        .documents-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .document-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .document-item h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .document-item .content-preview {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .document-item .content-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .document-item .content-preview p {
+            margin: 8px 0;
+        }
+        .delete-doc-btn {
+            background: #f44336;
+            color: white;
+            padding: 6px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .metadata-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .metadata-inputs input {
+            flex: 1;
+        }
+        .add-metadata-btn {
+            background: #28a745;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .load-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .clear-btn {
+            background: #dc3545;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            overflow: auto;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 3% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+            flex: 1;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .download-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+        .close-modal {
+            font-size: 35px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+            line-height: 1;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        .modal-body {
+            line-height: 1.8;
+        }
+        .modal-body p {
+            margin: 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .modal-body img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .modal-metadata {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .document-item {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .document-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 ChromaDB Document Builder</h1>
+            <p>Create documents naturally - just type and paste images directly</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2>Create New Document</h2>
+                <div id="message" class="message"></div>
+                
+                <form id="documentForm">
+                    <div class="form-group">
+                        <label for="collection">Collection:</label>
+                        <input type="text" id="collection" placeholder="my_collection" value="my_collection" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="docId">Document ID:</label>
+                        <input type="text" id="docId" placeholder="doc_" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Document Content:</label>
+                        <div class="editor-toolbar">
+                            <button type="button" class="toolbar-btn" onclick="insertImage()">
+                                🖼️ Insert Image
+                            </button>
+                            <button type="button" class="toolbar-btn" onclick="document.execCommand('bold')">
+                                <strong>B</strong> Bold
+                            </button>
+                            <button type="button" class="toolbar-btn" onclick="document.execCommand('italic')">
+                                <em>I</em> Italic
+                            </button>
+                            <button type="button" class="clear-btn" onclick="clearEditor()">
+                                🗑️ Clear All
+                            </button>
+                        </div>
+                        <div id="contentEditor" class="content-editor" contenteditable="true">
+                            <p class="editor-hint">Start typing or paste images (Ctrl+V) directly here...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Metadata (optional):</label>
+                        <div id="metadataContainer"></div>
+                        <button type="button" class="add-metadata-btn" onclick="addMetadataField()">+ Add Metadata</button>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">💾 Save Document</button>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h2>Documents</h2>
+                <div class="form-group">
+                    <label for="viewCollection">Collection:</label>
+                    <input type="text" id="viewCollection" placeholder="my_collection" value="my_collection">
+                </div>
+                <button class="load-btn" onclick="loadDocuments()">📂 Load Documents</button>
+                <div id="documentsList" class="documents-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+
+    <!-- Modal for viewing document -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Document</h2>
+                <div class="modal-actions">
+                    <button class="download-btn" onclick="downloadDocument()">📥 Download</button>
+                    <button class="close-modal" onclick="closeModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+            <div class="modal-metadata" id="modalMetadata">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('contentEditor');
+        const imageUpload = document.getElementById('imageUpload');
+        let currentDocument = null; // Store current document for download
+        
+        // Generate random ID
+        function generateId() {
+            return 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        document.getElementById('docId').value = generateId();
+        
+        // Remove hint on focus
+        editor.addEventListener('focus', function() {
+            const hint = editor.querySelector('.editor-hint');
+            if (hint) {
+                hint.remove();
+            }
+        });
+        
+        // Handle paste with images
+        editor.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            
+            // Check for images
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const blob = item.getAsFile();
+                    insertImageFromFile(blob);
+                    return;
+                }
+            }
+            
+            // Handle text paste - clean up formatting
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+        });
+        
+        // Insert image button
+        function insertImage() {
+            imageUpload.click();
+        }
+        
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                insertImageFromFile(file);
+            }
+        });
+        
+        // Insert image from file
+        function insertImageFromFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.display = 'block';
+                img.style.margin = '15px 0';
+                img.style.borderRadius = '8px';
+                
+                // Insert at cursor or end
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.insertNode(img);
+                    
+                    // Move cursor after image
+                    range.setStartAfter(img);
+                    range.setEndAfter(img);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // Add a new paragraph after image
+                    const p = document.createElement('p');
+                    p.innerHTML = '<br>';
+                    img.parentNode.insertBefore(p, img.nextSibling);
+                } else {
+                    editor.appendChild(img);
+                    const p = document.createElement('p');
+                    p.innerHTML = '<br>';
+                    editor.appendChild(p);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Clear editor
+        function clearEditor() {
+            if (confirm('Clear all content?')) {
+                editor.innerHTML = '<p class="editor-hint">Start typing or paste images (Ctrl+V) directly here...</p>';
+            }
+        }
+        
+        // Add metadata field
+        function addMetadataField() {
+            const container = document.getElementById('metadataContainer');
+            const div = document.createElement('div');
+            div.className = 'metadata-inputs';
+            div.innerHTML = `
+                <input type="text" placeholder="Key" class="meta-key">
+                <input type="text" placeholder="Value" class="meta-value">
+            `;
+            container.appendChild(div);
+        }
+        
+        // Show message
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Create collection if not exists
+        async function ensureCollection(collectionName) {
+            try {
+                await fetch(`/collections/${collectionName}`, { method: 'POST' });
+            } catch (e) {
+                // Collection might already exist
+            }
+        }
+        
+        // Get editor content as structured data
+        function getEditorContent() {
+            const content = [];
+            
+            // Function to walk the DOM tree in order
+            function walkNode(node) {
+                // Process each child in order
+                for (let child of node.childNodes) {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        const text = child.textContent.trim();
+                        if (text) {
+                            content.push({
+                                type: 'text',
+                                data: text
+                            });
+                        }
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        if (child.nodeName === 'IMG') {
+                            content.push({
+                                type: 'image',
+                                data: child.src
+                            });
+                        } else if (!child.classList.contains('editor-hint')) {
+                            // Recursively process this element
+                            walkNode(child);
+                        }
+                    }
+                }
+            }
+            
+            // Start walking from editor
+            walkNode(editor);
+            
+            console.log('Extracted content blocks:', content); // Debug
+            return content;
+        }
+        
+        // Submit form
+        document.getElementById('documentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const collection = document.getElementById('collection').value;
+            const docId = document.getElementById('docId').value;
+            
+            // Get structured content
+            const contentBlocks = getEditorContent();
+            
+            if (contentBlocks.length === 0) {
+                showMessage('Please add some content to the document', 'error');
+                return;
+            }
+            
+            // Build content string
+            let content = '';
+            contentBlocks.forEach(block => {
+                if (block.type === 'text') {
+                    content += `[TEXT]${block.data}[/TEXT]`;
+                } else if (block.type === 'image') {
+                    content += `[IMAGE]${block.data}[/IMAGE]`;
+                }
+            });
+            
+            // Gather metadata
+            const metadata = {};
+            document.querySelectorAll('.metadata-inputs').forEach(div => {
+                const key = div.querySelector('.meta-key').value;
+                const value = div.querySelector('.meta-value').value;
+                if (key && value) {
+                    metadata[key] = value;
+                }
+            });
+            
+            try {
+                // Ensure collection exists
+                await ensureCollection(collection);
+                
+                // Create document
+                const response = await fetch(`/collections/${collection}/documents`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: docId,
+                        content: content,
+                        metadata: Object.keys(metadata).length > 0 ? metadata : null
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('Document saved successfully!', 'success');
+                    editor.innerHTML = '<p class="editor-hint">Start typing or paste images (Ctrl+V) directly here...</p>';
+                    document.getElementById('docId').value = generateId();
+                    document.getElementById('metadataContainer').innerHTML = '';
+                    loadDocuments();
+                } else {
+                    const error = await response.json();
+                    showMessage('Error: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+        
+        // Load documents
+        window.loadDocuments = async function() {
+            const collection = document.getElementById('viewCollection').value;
+            if (!collection) return;
+            
+            try {
+                const response = await fetch(`/collections/${collection}/documents`);
+                const data = await response.json();
+                
+                const list = document.getElementById('documentsList');
+                list.innerHTML = '';
+                
+                if (data.documents.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #999;">No documents found</p>';
+                    return;
+                }
+                
+                data.documents.forEach(doc => {
+                    const div = document.createElement('div');
+                    div.className = 'document-item';
+                    
+                    let content = doc.document || '';
+                    console.log('Document content:', content.substring(0, 200)); // Debug
+                    
+                    let contentHtml = '<div class="content-preview">';
+                    
+                    // Parse blocks - need to handle both formats
+                    const textRegex = /\[TEXT\]([\s\S]*?)\[\/TEXT\]/g;
+                    const imageRegex = /\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g;
+                    
+                    const textMatches = [...content.matchAll(textRegex)];
+                    const imageMatches = [...content.matchAll(imageRegex)];
+                    
+                    console.log('Text matches:', textMatches.length, 'Image matches:', imageMatches.length); // Debug
+                    
+                    // Reconstruct in order
+                    const allMatches = [];
+                    
+                    textMatches.forEach(m => allMatches.push({type: 'text', index: m.index, content: m[1]}));
+                    imageMatches.forEach(m => allMatches.push({type: 'image', index: m.index, content: m[1]}));
+                    
+                    allMatches.sort((a, b) => a.index - b.index);
+                    
+                    if (allMatches.length === 0) {
+                        // Fallback: display raw content if no tags found
+                        contentHtml += `<p>${content}</p>`;
+                    } else {
+                        allMatches.forEach(match => {
+                            if (match.type === 'text') {
+                                contentHtml += `<p>${match.content}</p>`;
+                            } else {
+                                contentHtml += `<img src="${match.content}" alt="Image" style="max-width: 100%; max-height: 300px; display: block; margin: 10px 0;">`;
+                            }
+                        });
+                    }
+                    
+                    contentHtml += '</div>';
+                    
+                    const metadata = doc.metadata ? 
+                        Object.entries(doc.metadata).map(([k, v]) => `${k}: ${v}`).join(', ') : 
+                        'No metadata';
+                    
+                    div.innerHTML = `
+                        <h3>📄 ${doc.id}</h3>
+                        ${contentHtml}
+                        <p style="font-size: 12px; color: #999; margin-top: 10px;"><strong>Metadata:</strong> ${metadata}</p>
+                        <button class="delete-doc-btn" onclick="deleteDocument('${collection}', '${doc.id}')">🗑️ Delete</button>
+                    `;
+                    
+                    // Add click handler to view full document (but not on delete button)
+                    div.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('delete-doc-btn')) {
+                            viewDocument(doc);
+                        }
+                    });
+                    
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                showMessage('Error loading documents: ' + error.message, 'error');
+            }
+        }
+        
+        // View document in modal
+        function viewDocument(doc) {
+            currentDocument = doc; // Store for download
+            
+            const modal = document.getElementById('documentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            const modalMetadata = document.getElementById('modalMetadata');
+            
+            // Set title
+            modalTitle.textContent = doc.id;
+            
+            // Parse and display content
+            let content = doc.document || '';
+            let contentHtml = '';
+            
+            const textRegex = /\[TEXT\]([\s\S]*?)\[\/TEXT\]/g;
+            const imageRegex = /\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g;
+            
+            const textMatches = [...content.matchAll(textRegex)];
+            const imageMatches = [...content.matchAll(imageRegex)];
+            
+            const allMatches = [];
+            
+            textMatches.forEach(m => allMatches.push({type: 'text', index: m.index, content: m[1]}));
+            imageMatches.forEach(m => allMatches.push({type: 'image', index: m.index, content: m[1]}));
+            
+            allMatches.sort((a, b) => a.index - b.index);
+            
+            if (allMatches.length === 0) {
+                contentHtml = `<p>${content}</p>`;
+            } else {
+                allMatches.forEach(match => {
+                    if (match.type === 'text') {
+                        contentHtml += `<p>${match.content}</p>`;
+                    } else {
+                        contentHtml += `<img src="${match.content}" alt="Image">`;
+                    }
+                });
+            }
+            
+            modalBody.innerHTML = contentHtml;
+            
+            // Display metadata
+            if (doc.metadata && Object.keys(doc.metadata).length > 0) {
+                const metadataHtml = Object.entries(doc.metadata)
+                    .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
+                    .join('<br>');
+                modalMetadata.innerHTML = '<strong>Metadata:</strong><br>' + metadataHtml;
+            } else {
+                modalMetadata.innerHTML = '<strong>Metadata:</strong> None';
+            }
+            
+            // Show modal
+            modal.style.display = 'block';
+        }
+        
+        // Download document
+        window.downloadDocument = function() {
+            if (!currentDocument) return;
+            
+            // Parse content
+            let content = currentDocument.document || '';
+            const textRegex = /\[TEXT\]([\s\S]*?)\[\/TEXT\]/g;
+            const imageRegex = /\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g;
+            
+            const textMatches = [...content.matchAll(textRegex)];
+            const imageMatches = [...content.matchAll(imageRegex)];
+            
+            const allMatches = [];
+            
+            textMatches.forEach(m => allMatches.push({type: 'text', index: m.index, content: m[1]}));
+            imageMatches.forEach(m => allMatches.push({type: 'image', index: m.index, content: m[1]}));
+            
+            allMatches.sort((a, b) => a.index - b.index);
+            
+            // Build HTML content
+            let htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${currentDocument.id}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.8;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        p {
+            margin: 15px 0;
+            color: #333;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .metadata {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>${currentDocument.id}</h1>
+`;
+            
+            if (allMatches.length === 0) {
+                htmlContent += `    <p>${content}</p>\n`;
+            } else {
+                allMatches.forEach(match => {
+                    if (match.type === 'text') {
+                        htmlContent += `    <p>${match.content}</p>\n`;
+                    } else {
+                        htmlContent += `    <img src="${match.content}" alt="Image">\n`;
+                    }
+                });
+            }
+            
+            // Add metadata
+            if (currentDocument.metadata && Object.keys(currentDocument.metadata).length > 0) {
+                htmlContent += `    <div class="metadata">
+        <strong>Metadata:</strong><br>
+`;
+                Object.entries(currentDocument.metadata).forEach(([k, v]) => {
+                    htmlContent += `        <strong>${k}:</strong> ${v}<br>\n`;
+                });
+                htmlContent += `    </div>\n`;
+            }
+            
+            htmlContent += `</body>
+</html>`;
+            
+            // Create and download file
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentDocument.id}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Close modal
+        window.closeModal = function() {
+            document.getElementById('documentModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('documentModal');
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        
+        // Delete document
+        async function deleteDocument(collection, docId) {
+            if (!confirm('Delete this document?')) return;
+            
+            try {
+                const response = await fetch(`/collections/${collection}/documents/${docId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadDocuments();
+                }
+            } catch (error) {
+                alert('Error deleting document: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

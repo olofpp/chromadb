@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>ChromaDB Chat Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chat-container {
+            max-width: 900px;
+            width: 100%;
+            height: 90vh;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .chat-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+        .chat-header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .add-doc-btn {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .add-doc-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.user {
+            align-items: flex-end;
+        }
+        .message.bot {
+            align-items: flex-start;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .message.bot .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+        .message-time {
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 5px;
+            padding: 0 10px;
+        }
+        .search-result {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            max-width: 100%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .search-result:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .search-result-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+        }
+        .doc-id {
+            font-size: 0.75em;
+            color: #999;
+            font-weight: normal;
+            margin: -4px 0 8px 0;
+        }
+        .search-result-content {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        .search-result-content p {
+            margin: 5px 0;
+        }
+        .search-result-content img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .search-result-metadata {
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .chat-input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 18px;
+            width: 60px;
+        }
+        .typing-indicator.active {
+            display: block;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            overflow: auto;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 3% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+            flex: 1;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .edit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .edit-btn:hover {
+            transform: translateY(-2px);
+        }
+        .close-modal {
+            font-size: 35px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+            line-height: 1;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        .modal-body {
+            line-height: 1.8;
+        }
+        .modal-body p {
+            margin: 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .modal-body img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .modal-metadata {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .content-editor {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            overflow-y: auto;
+            cursor: text;
+        }
+        .content-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .content-editor[contenteditable] {
+            outline: none;
+        }
+        .content-editor img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .content-editor p {
+            margin: 10px 0;
+            min-height: 1.6em;
+        }
+        .editor-hint {
+            color: #999;
+            font-style: italic;
+            pointer-events: none;
+        }
+        .submit-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>💬 ChromaDB Chat Search</h1>
+            <p>Search the "howto" collection - Ask me anything!</p>
+            <button class="add-doc-btn" onclick="openAddDocModal()">➕ Add Document</button>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+        </div>
+        
+        <div class="chat-input-area">
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="Type your question here..."
+                    autocomplete="off"
+                >
+                <button id="sendBtn" class="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing document -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Document</h2>
+                <div class="modal-actions">
+                    <button class="edit-btn" onclick="openEditFromView()">✏️ Edit</button>
+                    <button class="close-modal" onclick="closeModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+            <div class="modal-metadata" id="modalMetadata">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding document -->
+    <div id="addDocModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="addDocModalTitle">Add New Document</h2>
+                <div class="modal-actions">
+                    <button class="close-modal" onclick="closeAddDocModal()">&times;</button>
+                </div>
+            </div>
+            <div id="addDocSuccess" class="success-message"></div>
+            <form id="addDocForm" onsubmit="handleAddDoc(event)">
+                <input type="hidden" id="docId">
+                <div class="form-group">
+                    <label for="docTitle">Title:</label>
+                    <input type="text" id="docTitle" required placeholder="Enter document title">
+                </div>
+                <div class="form-group">
+                    <label for="docContentEditor">Content (type text or paste images):</label>
+                    <div id="docContentEditor" class="content-editor" contenteditable="true">
+                        <p class="editor-hint">Type text or paste images (Ctrl+V) here...</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="docTags">Tags (optional):</label>
+                    <input type="text" id="docTags" placeholder="e.g., tutorial, guide, example">
+                </div>
+                <button type="submit" class="submit-btn" id="saveDocBtn">💾 Save Document</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const COLLECTION = 'howto';
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        let currentViewedDoc = null; // Store currently viewed document
+        let isEditMode = false; // Track if we're editing
+        let nextDocId = 1; // Auto-incrementing ID counter
+        
+        window.addEventListener('load', async () => {
+            await ensureCollection();
+            await initializeDocId();
+            displayWelcomeMessage();
+        });
+        
+        async function initializeDocId() {
+            try {
+                const response = await fetch(`/collections/${COLLECTION}/documents`);
+                const data = await response.json();
+                if (data.documents.length > 0) {
+                    // Find the highest numeric ID
+                    const ids = data.documents.map(doc => parseInt(doc.id) || 0);
+                    nextDocId = Math.max(...ids) + 1;
+                } else {
+                    nextDocId = 1;
+                }
+            } catch (e) {
+                nextDocId = 1;
+            }
+        }
+        
+        function displayWelcomeMessage() {
+            addMessage('👋 Welcome to the Document Search! Type your query to search documents in the "howto" collection.');
+        }
+        
+        async function ensureCollection() {
+            try {
+                await fetch(`/collections/${COLLECTION}`, { method: 'POST' });
+            } catch (e) {}
+        }
+        
+        function getTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            
+            if (typeof content === 'string') {
+                bubbleDiv.textContent = content;
+            } else {
+                bubbleDiv.appendChild(content);
+            }
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = getTime();
+            
+            messageDiv.appendChild(bubbleDiv);
+            messageDiv.appendChild(timeDiv);
+            chatMessages.appendChild(messageDiv);
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typing-indicator';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'typing-indicator active';
+            bubble.innerHTML = '<span></span><span></span><span></span>';
+            
+            typingDiv.appendChild(bubble);
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function hideTyping() {
+            const typing = document.getElementById('typing-indicator');
+            if (typing) typing.remove();
+        }
+        
+        function parseDocContent(content) {
+            const textRegex = /\[TEXT\]([\s\S]*?)\[\/TEXT\]/g;
+            const imageRegex = /\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g;
+            
+            const textMatches = [...content.matchAll(textRegex)];
+            const imageMatches = [...content.matchAll(imageRegex)];
+            
+            const allMatches = [];
+            textMatches.forEach(m => allMatches.push({type: 'text', index: m.index, content: m[1]}));
+            imageMatches.forEach(m => allMatches.push({type: 'image', index: m.index, content: m[1]}));
+            allMatches.sort((a, b) => a.index - b.index);
+            
+            return allMatches;
+        }
+        
+        function createSearchResult(doc) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'search-result';
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'search-result-title';
+            const title = doc.metadata?.title || doc.id;
+            titleDiv.innerHTML = `📄 ${title}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'search-result-content';
+            
+            const content = doc.document || '';
+            const matches = parseDocContent(content);
+            
+            if (matches.length === 0) {
+                const p = document.createElement('p');
+                p.textContent = content.substring(0, 200) + (content.length > 200 ? '...' : '');
+                contentDiv.appendChild(p);
+            } else {
+                let count = 0;
+                for (const match of matches) {
+                    if (count >= 3) break;
+                    
+                    if (match.type === 'text') {
+                        const p = document.createElement('p');
+                        p.textContent = match.content.substring(0, 150) + (match.content.length > 150 ? '...' : '');
+                        contentDiv.appendChild(p);
+                        count++;
+                    } else if (match.type === 'image') {
+                        const img = document.createElement('img');
+                        img.src = match.content;
+                        contentDiv.appendChild(img);
+                        count++;
+                    }
+                }
+            }
+            
+            const idDiv = document.createElement('div');
+            idDiv.className = 'doc-id';
+            idDiv.textContent = `ID: ${doc.id}`;
+            
+            if (doc.metadata && Object.keys(doc.metadata).length > 0) {
+                const metaDiv = document.createElement('div');
+                metaDiv.className = 'search-result-metadata';
+                const filteredMeta = Object.entries(doc.metadata)
+                    .filter(([k]) => k !== 'title') // Don't show title in metadata since it's in the header
+                    .map(([k, v]) => `<strong>${k}:</strong> ${v}`);
+                if (filteredMeta.length > 0) {
+                    metaDiv.innerHTML = filteredMeta.join(' • ');
+                    contentDiv.appendChild(metaDiv);
+                }
+            }
+            
+            resultDiv.appendChild(titleDiv);
+            resultDiv.appendChild(idDiv);
+            resultDiv.appendChild(contentDiv);
+            
+            resultDiv.addEventListener('click', () => viewDocument(doc));
+            
+            return resultDiv;
+        }
+        
+        async function searchDocuments(query) {
+            try {
+                const response = await fetch(`/collections/${COLLECTION}/documents`);
+                const data = await response.json();
+                
+                if (data.documents.length === 0) {
+                    return null;
+                }
+                
+                const queryLower = query.toLowerCase();
+                const results = data.documents.filter(doc => {
+                    const docContent = (doc.document || '').toLowerCase();
+                    const docId = (doc.id || '').toLowerCase();
+                    const metaStr = doc.metadata ? JSON.stringify(doc.metadata).toLowerCase() : '';
+                    
+                    return docContent.includes(queryLower) || 
+                           docId.includes(queryLower) || 
+                           metaStr.includes(queryLower);
+                });
+                
+                return results;
+            } catch (error) {
+                console.error('Search error:', error);
+                return null;
+            }
+        }
+        
+        async function handleSend() {
+            const query = chatInput.value.trim();
+            if (!query) return;
+            
+            addMessage(query, true);
+            chatInput.value = '';
+            sendBtn.disabled = true;
+            
+            showTyping();
+            
+            const results = await searchDocuments(query);
+            hideTyping();
+            
+            if (!results || results.length === 0) {
+                addMessage("I couldn't find any documents matching your query. Try rephrasing or check if documents exist in the 'howto' collection.");
+            } else {
+                const resultsContainer = document.createElement('div');
+                
+                const intro = document.createElement('p');
+                intro.textContent = `Found ${results.length} result${results.length > 1 ? 's' : ''}:`;
+                intro.style.marginBottom = '10px';
+                intro.style.fontWeight = '600';
+                resultsContainer.appendChild(intro);
+                
+                results.forEach(doc => {
+                    resultsContainer.appendChild(createSearchResult(doc));
+                });
+                
+                addMessage(resultsContainer, false);
+            }
+            
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+        
+        function viewDocument(doc) {
+            currentViewedDoc = doc; // Store for editing
+            const modal = document.getElementById('documentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            const modalMetadata = document.getElementById('modalMetadata');
+            
+            const title = doc.metadata?.title || doc.id;
+            modalTitle.textContent = title;
+            
+            const content = doc.document || '';
+            const matches = parseDocContent(content);
+            
+            modalBody.innerHTML = '';
+            
+            if (matches.length === 0) {
+                const p = document.createElement('p');
+                p.textContent = content;
+                modalBody.appendChild(p);
+            } else {
+                matches.forEach(match => {
+                    if (match.type === 'text') {
+                        const p = document.createElement('p');
+                        p.textContent = match.content;
+                        modalBody.appendChild(p);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = match.content;
+                        modalBody.appendChild(img);
+                    }
+                });
+            }
+            
+            // Display metadata (excluding title since it's in the header)
+            if (doc.metadata && Object.keys(doc.metadata).length > 0) {
+                const filteredMeta = Object.entries(doc.metadata)
+                    .filter(([k]) => k !== 'title')
+                    .map(([k, v]) => `<strong>${k}:</strong> ${v}`);
+                if (filteredMeta.length > 0) {
+                    modalMetadata.innerHTML = '<strong>Metadata:</strong><br>' + filteredMeta.join('<br>');
+                } else {
+                    modalMetadata.innerHTML = '<strong>Document ID:</strong> ' + doc.id;
+                }
+            } else {
+                modalMetadata.innerHTML = '<strong>Document ID:</strong> ' + doc.id;
+            }
+            
+            modal.style.display = 'block';
+        }
+        
+        window.closeModal = function() {
+            document.getElementById('documentModal').style.display = 'none';
+        }
+        
+        window.openAddDocModal = function() {
+            isEditMode = false;
+            const editor = document.getElementById('docContentEditor');
+            const modalTitle = document.getElementById('addDocModalTitle');
+            const saveBtn = document.getElementById('saveDocBtn');
+            
+            modalTitle.textContent = 'Add New Document';
+            saveBtn.textContent = '💾 Save Document';
+            
+            document.getElementById('addDocModal').style.display = 'block';
+            document.getElementById('docId').value = nextDocId.toString();
+            document.getElementById('docTitle').value = '';
+            document.getElementById('docTitle').readOnly = false;
+            editor.innerHTML = '<p class="editor-hint">Type text or paste images (Ctrl+V) here...</p>';
+            document.getElementById('docTags').value = '';
+            document.getElementById('addDocSuccess').classList.remove('show');
+        }
+        
+        window.openEditFromView = function() {
+            if (!currentViewedDoc) return;
+            
+            isEditMode = true;
+            const editor = document.getElementById('docContentEditor');
+            const modalTitle = document.getElementById('addDocModalTitle');
+            const saveBtn = document.getElementById('saveDocBtn');
+            
+            modalTitle.textContent = 'Edit Document';
+            saveBtn.textContent = '💾 Update Document';
+            
+            // Close view modal
+            closeModal();
+            
+            // Populate form with existing data
+            document.getElementById('docId').value = currentViewedDoc.id;
+            document.getElementById('docTitle').value = currentViewedDoc.metadata?.title || '';
+            document.getElementById('docTitle').readOnly = false;
+            
+            // Load content into editor
+            editor.innerHTML = '';
+            const content = currentViewedDoc.document || '';
+            const matches = parseDocContent(content);
+            
+            if (matches.length === 0) {
+                const p = document.createElement('p');
+                p.textContent = content;
+                editor.appendChild(p);
+            } else {
+                matches.forEach(match => {
+                    if (match.type === 'text') {
+                        const p = document.createElement('p');
+                        p.textContent = match.content;
+                        editor.appendChild(p);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = match.content;
+                        img.style.maxWidth = '100%';
+                        img.style.height = 'auto';
+                        img.style.display = 'block';
+                        img.style.margin = '15px 0';
+                        img.style.borderRadius = '8px';
+                        editor.appendChild(img);
+                    }
+                });
+            }
+            
+            // Load tags from metadata
+            if (currentViewedDoc.metadata && currentViewedDoc.metadata.tags) {
+                document.getElementById('docTags').value = currentViewedDoc.metadata.tags;
+            } else {
+                document.getElementById('docTags').value = '';
+            }
+            
+            document.getElementById('addDocSuccess').classList.remove('show');
+            document.getElementById('addDocModal').style.display = 'block'
+            document.getElementById('addDocSuccess').classList.remove('show');
+        }
+        
+        window.closeAddDocModal = function() {
+            document.getElementById('addDocModal').style.display = 'none';
+        }
+        
+        // Handle editor focus
+        const docEditor = document.getElementById('docContentEditor');
+        docEditor.addEventListener('focus', function() {
+            const hint = docEditor.querySelector('.editor-hint');
+            if (hint) {
+                hint.remove();
+            }
+        });
+        
+        // Handle paste with images
+        docEditor.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const blob = item.getAsFile();
+                    insertImageIntoEditor(blob);
+                    return;
+                }
+            }
+            
+            // Handle text paste
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+        });
+        
+        // Insert image into editor
+        function insertImageIntoEditor(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.display = 'block';
+                img.style.margin = '15px 0';
+                img.style.borderRadius = '8px';
+                
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.insertNode(img);
+                    
+                    range.setStartAfter(img);
+                    range.setEndAfter(img);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    const p = document.createElement('p');
+                    p.innerHTML = '<br>';
+                    img.parentNode.insertBefore(p, img.nextSibling);
+                } else {
+                    docEditor.appendChild(img);
+                    const p = document.createElement('p');
+                    p.innerHTML = '<br>';
+                    docEditor.appendChild(p);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        
+    funcgittion getEditorContent() {
+        const docEditor = document.getElementById('docContentEditor');
+        const content = [];
+        
+        function walkNode(node) {
+            for (const child of node.childNodes) {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    const text = child.textContent.trim();
+                    if (text) {
+                        content.push({
+                            type: 'text',
+                            data: text
+                        });
+                    }
+                } else if (child.nodeType === Node.ELEMENT_NODE) {
+                    if (child.nodeName === 'IMG') {
+                        content.push({
+                            type: 'image',
+                            data: child.src
+                        });
+                    } else if (!child.classList.contains('editor-hint')) {
+                        walkNode(child);
+                    }
+                }
+            }
+        }
+        
+        walkNode(docEditor);
+        return content;
+    }
+    
+window.handleAddDoc = async function(e) {
+    e.preventDefault();
+    
+    const docId = document.getElementById('docId').value.trim();
+    const title = document.getElementById('docTitle').value.trim();
+    const tags = document.getElementById('docTags').value.trim();
+    
+    if (!docId || !title) return;
+    
+    const contentBlocks = getEditorContent();
+    
+    if (contentBlocks.length === 0) {
+        alert('Please add some content to the document');
+        return;
+    }
+    
+    let content = '';
+    contentBlocks.forEach(block => {
+        if (block.type === 'text') {
+            content += `[TEXT]${block.data}[/TEXT]`;
+        } else if (block.type === 'image') {
+            content += `[IMAGE]${block.data}[/IMAGE]`;
+        }
+    });
+    
+    const metadata = { title: title };
+    if (tags) {
+        metadata.tags = tags;
+    }
+    
+    try {
+        await ensureCollection();
+        
+        let response;
+        if (isEditMode) {
+            // Update existing document
+            response = await fetch(`/collections/${COLLECTION}/documents/${docId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: content,
+                    metadata: Object.keys(metadata).length > 0 ? metadata : null
+                })
+            });
+        } else {
+            // Create new document
+            response = await fetch(`/collections/${COLLECTION}/documents`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: docId,
+                    content: content,
+                    metadata: Object.keys(metadata).length > 0 ? metadata : null
+                })
+            });
+        }
+        
+        if (response.ok) {
+            const successMsg = document.getElementById('addDocSuccess');
+            successMsg.textContent = isEditMode ? '✅ Document updated successfully!' : '✅ Document saved successfully!';
+            successMsg.classList.add('show');
+            
+            if (!isEditMode) {
+                nextDocId++; // Increment for next document
+            }
+            
+            setTimeout(() => {
+                closeAddDocModal();
+                isEditMode = false;
+            }, 1500);
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.detail);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+sendBtn.addEventListener('click', handleSend);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSend();
+            }
+        });
+        
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('documentModal');
+            const addModal = document.getElementById('addDocModal');
+            if (e.target === modal) {
+                closeModal();
+            }
+            if (e.target === addModal) {
+                closeAddDocModal();
+            }
+        });
+    </script>
+</body>
+</html>
