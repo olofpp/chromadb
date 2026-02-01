@@ -17,8 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ensure ChromaDB data directory exists
+CHROMA_DATA_PATH = "./chroma_data"
+os.makedirs(CHROMA_DATA_PATH, exist_ok=True)
+
 # Initialize ChromaDB client with persistent storage
-client = chromadb.PersistentClient(path="./chroma_data")
+client = chromadb.PersistentClient(path=CHROMA_DATA_PATH)
 
 
 # Pydantic models
